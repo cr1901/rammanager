@@ -1,0 +1,295 @@
+<!doctype html>
+
+<html>
+<head>
+    <style type="text/css">
+        /* Ideas from: https://codepen.io/tjvantoll/pen/JEKIu */
+        /* @keyframes row-clicked {
+            from {background-color: steelblue;}
+            to {background-color: lightgrey;}
+        } */
+
+        body {
+            background-color: ghostwhite;
+            font-family: Courier;
+        }
+
+        h1 {
+            text-align: center;
+            color: darkgrey;
+        }
+
+        #control-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            background-color: gainsboro;
+        }
+
+        #control-container label {
+            display: inline-block;
+            vertical-align: top;
+            width: 25%;
+        }
+
+        #table-container {
+            height: auto;
+        }
+
+        #flask-logo {
+            display: inline-block;
+            margin-left:auto;
+        }
+
+        table {
+            padding: 1em;
+            width: 100%;
+            table-layout: fixed;
+            border-spacing: 0;
+            background-color: lightgrey;
+
+        }
+
+        thead tr {
+            display: block;
+            position: relative;
+            color: ghostwhite;
+            text-align: center;
+        }
+
+        td:nth-child(1), th:nth-child(1) { min-width: 100px; }
+        td:nth-child(2), th:nth-child(2) { min-width: 100px; }
+        td:nth-child(3), th:nth-child(3) { min-width: 100px; }
+        td:nth-child(4), th:nth-child(4) { width: 800px; }
+
+        tbody {
+            display: block;
+            overflow: auto;
+            width: 100%;
+            height: 450px;
+            background-color: gainsboro;
+        }
+
+        tbody td {
+            border: thin ridge;
+            margin: 0px;
+            white-space: pre-line;
+        }
+
+        form {
+            background-color: gainsboro;
+            width: 50%;
+        }
+
+        label, input {
+            display: inline-block;
+        }
+
+        label {
+            /* positions the label text beside the input */
+            width: 30%;
+            align: left;
+        }
+
+        form {
+            padding: 1em;
+        }
+
+        form input {
+            float: right;
+            width: 50%;
+        }
+
+        textarea {
+            white-space: pre;
+        }
+
+        #addr-search {
+            width: 40%;
+        }
+
+        #desc-label {
+            width: 100%;
+        }
+
+        #submit {
+            float: none;
+            width: 20%;
+        }
+
+        #clear {
+            float: none;
+            width: 20%;
+        }
+    </style>
+    <script type="text/javascript" src="/jquery-3.0.0.js"></script>
+</head>
+
+<body>
+    <h1>Ram Manager</h1>
+    <div id="control-container">
+        <label>Address Search: <input id="addr-search"></label>
+        <label>Regex Search: <input id="regex-search"></label>
+            <a id="flask-logo" href="http://flask.pocoo.org/">
+            <img src="http://flask.pocoo.org/static/badges/flask-project-s.png"
+                border="0" alt="a Flask project" title="a Flask project">
+            </a>
+    </div>
+    <div id="table-container">
+    <table id="ram-table">
+        <thead>
+            <tr><th>Address</th>
+                <th>Size</th>
+                <th>Type</th>
+                <th id="desc-field">Description</th></tr>
+        </thead>
+
+        <tbody id="ramdata">
+        </tbody>
+    </table>
+    </div>
+
+    <form id="submit-form">
+        <label>Address: <input id="addr" type="text"></label>
+        <!-- <label>Allow Update: <input id="update" type="checkbox" checked=""></label> -->
+        <label>Size: <input id="size" type="text"></label>
+        <label>Type: <input id="type" type="text"></label>
+        <label id="desc-label">Description: <textarea id="desc" rows="10" cols="80"></textarea></label></br>
+        <input id="submit" type="submit" value="Submit" />
+        <input id="clear" type="button" value="Clear Form" onClick="this.form.reset()" />
+        <p>Leave all fields except Address blank to delete from server!</p>
+    </form>
+
+    <script type="text/javascript">
+        (function() {
+            /* Required b/c of implementation detail. */
+            $.valHooks.textarea = {
+                get: function( elem ) {
+                    return elem.value.replace( /\r?\n/g, "\r\n" );
+                }
+            };
+
+            var tableBody = document.getElementById("ramdata");
+            var addrSearch = document.getElementById("addr-search");
+            var form = document.getElementById("submit-form");
+
+            var formatEntry = function(inAddr, inType, inSize, inDesc) {
+                return JSON.stringify({address : inAddr, type : inType,
+                     size : inSize, description : inDesc})
+            }
+
+            var sanitizeAddr = function() {
+
+            }
+
+            /* Request senders */
+            var fetchAddr = function(addr) {
+                if(addr === "") {
+                    url = "/ram";
+                } else {
+                    url = "/ram/" + addr;
+                }
+
+                var body = $("#ram-table > tbody");
+                body.empty();
+
+                $.getJSON(url, function(resp) {
+                    var r = new Array();
+                    j = -1;
+                    $.each(resp, function(k, v) {
+                        r[++j] = "<tr><td>";
+                        r[++j] = v["address"];
+                        r[++j] = "</td><td>";
+                        r[++j] = v["size"];
+                        r[++j] = "</td><td>";
+                        r[++j] = v["type"];
+                        r[++j] = "</td><td>";
+                        r[++j] = v["description"];
+                        r[++j] = "</td></tr>";
+                    })
+                    body[0].innerHTML = r.join("");
+                });
+            }
+
+            /* Event handlers */
+            $("#ram-table tbody").on("click", "tr", function() {
+                tableVals = $(this).children()
+                var tmp;
+
+                /* We better have this! */
+                $("#addr").val(tableVals[0].firstChild.textContent)
+
+                /* TODO: Clean up */
+                tmp = tableVals[2].firstChild;
+                if(tmp == null) {
+                    $("#type").val("")
+                } else {
+                    $("#type").val(tmp.textContent)
+                }
+
+                tmp = tableVals[1].firstChild;
+                if(tmp == null) {
+                    $("#size").val("")
+                } else {
+                    $("#size").val(tmp.textContent)
+                }
+
+                tmp = tableVals[3].firstChild;
+                if(tmp == null) {
+                    $("#desc").val("")
+                } else {
+                    $("#desc").val(tmp.textContent)
+                }
+            });
+
+            var submitAddr = function(ev) {
+                addr = $("#addr").val();
+                type = $("#type").val();
+                size = $("#size").val();
+                desc = $("#desc").val();
+
+                sanAddr = addr.replace(":", "")
+
+                json = formatEntry(sanAddr, type, size, desc);
+                if (type === "" && size === "" && desc === "") {
+                    $.ajax({
+                        url: "/ram/" + sanAddr,
+                        method: "DELETE",
+                        contentType: "application/json",
+                        data: json,
+                        success: function(result) {
+                            sanAddr = $("#addr-search").val().replace(":", "")
+                            fetchAddr(sanAddr);
+                        }
+                    });
+                } else {
+                    $.ajax({
+                        url: "/ram/" + sanAddr,
+                        method: "PUT",
+                        contentType: "application/json",
+                        data: json,
+                        success: function(result) {
+                            sanAddr = $("#addr-search").val().replace(":", "")
+                            fetchAddr(sanAddr);
+                        }
+                    });
+                }
+
+                return false;
+            }
+
+            addrSearch.oninput = function(ev) {
+                sanAddr = $("#addr-search").val().replace(":", "")
+                fetchAddr(sanAddr);
+            };
+            form.onsubmit = submitAddr;
+
+            /* Initialize */
+            fetchAddr("");
+        })();
+    </script>
+
+
+</body>
+
+</html>
