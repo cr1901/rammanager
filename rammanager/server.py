@@ -1,7 +1,7 @@
 import json
 import bisect
 import os.path
-from snes.rom import LOROM
+from rammanager.address import LOROM
 
 from tinydb import TinyDB, Query
 from tinydb.storages import JSONStorage
