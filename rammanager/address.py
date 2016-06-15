@@ -19,7 +19,7 @@ class LOROM:
     # 1 argument, integer 3 bytes, "packed LOROM"
     # 1 argument, integer 3 bytes, flat=True
     # 2 arguments, bank, offset
-    def __init__(self, flat=True, *args):
+    def __init__(self, *args,  flat=True):
         if len(args) == 1:
             if isinstance(args[0], str):
                 (self.bank, self.offset) = LOROM.from_str(args[0])
