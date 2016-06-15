@@ -208,6 +208,14 @@
                         r[++j] = "</td></tr>";
                     })
                     body[0].innerHTML = r.join("");
+                }).fail(function() {
+                    var r = new Array();
+                    r[++j] = "<tr><td>";
+                    r[++j] = "</td><td>";
+                    r[++j] = "</td><td>";
+                    r[++j] = "</td><td>";
+                    r[++j] = "</td></tr>";
+                    body[0].innerHTML = r.join("");
                 });
             }
 
@@ -257,7 +265,7 @@
                         method: "DELETE",
                         contentType: "application/json",
                         data: json,
-                        success: function(result) {
+                        complete: function() {
                             sanAddr = $("#addr-search").val().replace(":", "")
                             fetchAddr(sanAddr);
                         }
@@ -268,7 +276,7 @@
                         method: "PUT",
                         contentType: "application/json",
                         data: json,
-                        success: function(result) {
+                        complete: function(result) {
                             sanAddr = $("#addr-search").val().replace(":", "")
                             fetchAddr(sanAddr);
                         }

@@ -47,36 +47,60 @@ def send_jquery():
 
 @app.route("/ram", methods=["GET"])
 def get_all():
-    return jsonify(sorted(get_db().all(), key=lambda k: k["address"]))
+    all_entries = get_db().all()
+    if not all_entries:
+        abort(404)
+    return jsonify(sorted(all_entries, key=lambda k: k["address"]))
+
+
+@app.route("/ram/<addr>", methods=["GET"])
+def get_addr(addr):
+    str_addr = addr[0:2] + ":" + addr[2:]
+    db = get_db()
+    var = Query()
+    # addr is a string in this case!
+    ram_vars = db.search(var.address.search(str_addr))
+    if not ram_vars:
+        abort(404)
+    return jsonify(sorted(ram_vars, key=lambda k: k["address"]))
+
 
 @app.route("/ram/<addr>", methods=["PUT"])
 def add_addr(addr):
     if request.headers["Content-Type"]  != "application/json":
         print(request.headers["Content-Type"])
         abort(400)
-    #try:
-    json_req = json.loads(request.data.decode("utf-8"))
-    addr = repr(LOROM(int(json_req["address"], 16), flat=False))
-    data = {"address" : addr,
-            "type" : json_req["type"],
-            "size" : json_req["size"],
-            "description" : json_req["description"]}
-    #except:
-    #    abort(400)
+    try:
+        json_req = json.loads(request.data.decode("utf-8"))
+        addr = repr(LOROM(int(json_req["address"], 16), flat=False))
+        data = {"address" : addr,
+                "type" : json_req["type"],
+                "size" : json_req["size"],
+                "description" : json_req["description"]}
+    except:
+        # TODO: Better error handlers which return messages
+        # indicating what went wrong. Return deleted added/entries?
+        # Perhaps return what "GET" for the given input would send
+        # after updating, given an input address range?
+        abort(500)
 
     db = get_db()
     var = Query()
     if not db.contains(var.address == addr):
         db.insert(data)
+        resp = "CREATED"
+        code = 201
     else:
         db.update(data, var.address == addr)
-    return "OK"
+        resp = "UPDATED"
+        code = 200
+        # Return 204? But client should refresh view.
+    return (resp, code)
 
 
 @app.route("/ram/<addr>", methods=["DELETE"])
 def delete_addr(addr):
     if request.headers["Content-Type"]  != "application/json":
-        print(request.headers["Content-Type"])
         abort(400)
     json_req = json.loads(request.data.decode("utf-8"))
     addr = repr(LOROM(int(json_req["address"], 16), flat=False))
@@ -85,21 +109,9 @@ def delete_addr(addr):
     var = Query()
     if db.contains(var.address == addr):
         db.remove(var.address == addr)
-    return "OK"
-
-
-@app.route("/ram/<addr>", methods=["GET"])
-def get_addr(addr):
-    str_addr = addr[0:2] + ":" + addr[2:]
-    var = Query()
-    db = get_db()
-    # addr is a string in this case!
-    ram_vars = db.search(var.address.search(str_addr))
-
-    # TODO: Should we return 404 if no match?
-    # if not ram_vars:
-    #    abort(404)
-    return jsonify(sorted(ram_vars, key=lambda k: k["address"]))
+    else:
+        abort(404)
+    return "DELETED"
 
 
 if __name__ == "__main__":
